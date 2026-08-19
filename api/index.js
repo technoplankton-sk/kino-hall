@@ -1,5 +1,7 @@
 const https = require('https');
 
+const TMDB_KEY = '3fd2be6f0cd0ed1635c61b9333f69e22';
+
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, {
@@ -14,7 +16,7 @@ function fetchJson(url) {
           try {
             resolve(JSON.parse(body));
           } catch (e) {
-            reject({ status: res.statusCode, message: 'JSON error' });
+            reject({ status: res.statusCode, message: 'JSON Error' });
           }
         } else {
           reject({ status: res.statusCode, message: `Status ${res.statusCode}` });
@@ -31,44 +33,41 @@ module.exports = async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
 
   const { action, q } = req.query;
-  const query = q || 'Taxi';
+  const query = q || 'омен';
 
   try {
-    // Поиск по открытому агрегатору Кинопоиска/IMDb для фильмов Люка Бессона и мирового кино
-    const searchUrl = `https://kinopoiskapiuncensored.net/api/search?query=${encodeURIComponent(query)}`;
-    const data = await fetchJson(searchUrl);
+    // 1. Пробуем найти по локали ru-RU
+    let searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&language=ru-RU&query=${encodeURIComponent(query)}`;
+    let data = await fetchJson(searchUrl);
 
-    const formatted = (data.docs || data.results || []).map(item => {
+    // 2. Если на русском не нашло, ищем без привязки к языку (для оригинальных названий)
+    if (!data.results || data.results.length === 0) {
+      searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}`;
+      data = await fetchJson(searchUrl);
+    }
+
+    // Получаем детали фильма (включая IMDb ID)
+    const formatted = await Promise.all((data.results || []).slice(0, 18).map(async (item) => {
+      let imdbId = null;
+      try {
+        const detailsUrl = `https://api.themoviedb.org/3/movie/${item.id}?api_key=${TMDB_KEY}`;
+        const details = await fetchJson(detailsUrl);
+        imdbId = details.imdb_id;
+      } catch (e) {}
+
       return {
-        id: item.kinopoiskId || item.id || item.imdbId,
-        imdbId: item.imdbId || (item.externalId ? item.externalId.imdb : null),
-        title: item.nameRu || item.title || item.nameEn || 'Без названия',
-        poster: item.posterUrl || item.poster || `https://kinopoiskapiuncensored.net/images/posters/kp/${item.kinopoiskId || item.id}.jpg`,
-        year: item.year || '—',
-        rating: item.ratingKinopoisk || item.rating || '—'
+        id: item.id,
+        imdbId: imdbId,
+        title: item.title || item.original_title || 'Без названия',
+        poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки',
+        year: item.release_date ? item.release_date.split('-')[0] : '—',
+        rating: item.vote_average ? item.vote_average.toFixed(1) : '—'
       };
-    });
+    }));
 
     return res.status(200).json({ results: formatted });
 
   } catch (err) {
-    // Резервный поиск по англоязычной базе фильмов, если основной не ответил
-    try {
-      const fallbackUrl = `https://www.omdbapi.com/?apikey=trilogy&s=${encodeURIComponent(query)}&type=movie`;
-      const fallbackData = await fetchJson(fallbackUrl);
-      
-      const formattedFallback = (fallbackData.Search || []).map(item => ({
-        id: item.imdbID,
-        imdbId: item.imdbID,
-        title: item.Title,
-        poster: item.Poster !== 'N/A' ? item.Poster : 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки',
-        year: item.Year,
-        rating: '—'
-      }));
-
-      return res.status(200).json({ results: formattedFallback });
-    } catch (e) {
-      return res.status(200).json({ results: [] });
-    }
+    return res.status(500).json({ error: true, message: err.message, results: [] });
   }
 };
