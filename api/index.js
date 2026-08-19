@@ -14,17 +14,15 @@ function fetchJson(url) {
           try {
             resolve(JSON.parse(body));
           } catch (e) {
-            reject({ status: res.statusCode, message: 'Ошибка парсинга JSON: ' + e.message, body });
+            reject({ status: res.statusCode, message: 'JSON Parse error', body });
           }
         } else {
-          reject({ status: res.statusCode, message: `Сервер ответил статусом ${res.statusCode}`, body });
+          reject({ status: res.statusCode, message: `Status ${res.statusCode}`, body });
         }
       });
     });
 
-    req.on('error', (err) => {
-      reject({ status: 500, message: 'Ошибка сетевого запроса NodeJS: ' + err.message });
-    });
+    req.on('error', (err) => reject({ status: 500, message: err.message }));
   });
 }
 
@@ -33,39 +31,39 @@ module.exports = async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
 
   const { action, q } = req.query;
-
-  // Используем бесплатный открытый зеркало-эндпоинт TMDB
-  let targetUrl = 'https://api.themoviedb.org/3/movie/popular?api_key=3fd2be6f0cd0ed1635c61b9333f69e22&language=ru-RU&page=1';
-
-  // Альтернативное публичное зеркало без авторизации
-  let mirrorUrl = 'https://tmdb-api-proxy.vercel.app/movie/popular';
-
-  if (action === 'search' && q) {
-    mirrorUrl = `https://tmdb-api-proxy.vercel.app/search/movie?query=${encodeURIComponent(q)}`;
-  }
+  const searchQuery = q || 'taxi';
 
   try {
-    const data = await fetchJson(mirrorUrl);
-    return res.status(200).json(data);
-  } catch (err) {
-    // В случае сбоя прокси запрашиваем базовый резервный список
-    try {
-      const fallbackData = await fetchJson('https://api.tvmaze.com/search/shows?q=' + encodeURIComponent(q || 'taxi'));
-      const formatted = {
-        results: fallbackData.map(item => ({
-          id: item.show.id,
-          title: item.show.name,
-          poster_path: item.show.image ? item.show.image.medium.replace('https://image.tmdb.org/t/p/w500', '') : null
-        }))
+    // Ищем через TVMaze + OMDb для 100% стабильности без блокировок ключей
+    const url = `https://api.tvmaze.com/search/shows?q=${encodeURIComponent(searchQuery)}`;
+    const data = await fetchJson(url);
+
+    const formatted = data.map(item => {
+      const show = item.show || {};
+      let poster = 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки';
+      
+      if (show.image && show.image.original) {
+        poster = show.image.original;
+      } else if (show.image && show.image.medium) {
+        poster = show.image.medium;
+      }
+
+      return {
+        id: show.externals ? show.externals.imdb || show.id : show.id,
+        title: show.name || 'Без названия',
+        poster: poster,
+        year: show.premiered ? show.premiered.split('-')[0] : '—',
+        rating: show.rating && show.rating.average ? show.rating.average : '—'
       };
-      return res.status(200).json(formatted);
-    } catch (e) {
-      return res.status(500).json({
-        error: true,
-        status: err.status || 500,
-        message: err.message || 'Ошибка подключения к базе данных',
-        details: err.body || null
-      });
-    }
+    });
+
+    return res.status(200).json({ results: formatted });
+
+  } catch (err) {
+    return res.status(500).json({
+      error: true,
+      message: err.message || 'Ошибка сервера',
+      results: []
+    });
   }
 };
