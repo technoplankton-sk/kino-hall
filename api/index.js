@@ -14,10 +14,10 @@ function fetchJson(url) {
           try {
             resolve(JSON.parse(body));
           } catch (e) {
-            reject({ status: res.statusCode, message: 'JSON Parse error', body });
+            reject({ status: res.statusCode, message: 'JSON error' });
           }
         } else {
-          reject({ status: res.statusCode, message: `Status ${res.statusCode}`, body });
+          reject({ status: res.statusCode, message: `Status ${res.statusCode}` });
         }
       });
     });
@@ -31,39 +31,44 @@ module.exports = async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
 
   const { action, q } = req.query;
-  const searchQuery = q || 'taxi';
+  const query = q || 'Taxi';
 
   try {
-    // Ищем через TVMaze + OMDb для 100% стабильности без блокировок ключей
-    const url = `https://api.tvmaze.com/search/shows?q=${encodeURIComponent(searchQuery)}`;
-    const data = await fetchJson(url);
+    // Поиск по открытому агрегатору Кинопоиска/IMDb для фильмов Люка Бессона и мирового кино
+    const searchUrl = `https://kinopoiskapiuncensored.net/api/search?query=${encodeURIComponent(query)}`;
+    const data = await fetchJson(searchUrl);
 
-    const formatted = data.map(item => {
-      const show = item.show || {};
-      let poster = 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки';
-      
-      if (show.image && show.image.original) {
-        poster = show.image.original;
-      } else if (show.image && show.image.medium) {
-        poster = show.image.medium;
-      }
-
+    const formatted = (data.docs || data.results || []).map(item => {
       return {
-        id: show.externals ? show.externals.imdb || show.id : show.id,
-        title: show.name || 'Без названия',
-        poster: poster,
-        year: show.premiered ? show.premiered.split('-')[0] : '—',
-        rating: show.rating && show.rating.average ? show.rating.average : '—'
+        id: item.kinopoiskId || item.id || item.imdbId,
+        imdbId: item.imdbId || (item.externalId ? item.externalId.imdb : null),
+        title: item.nameRu || item.title || item.nameEn || 'Без названия',
+        poster: item.posterUrl || item.poster || `https://kinopoiskapiuncensored.net/images/posters/kp/${item.kinopoiskId || item.id}.jpg`,
+        year: item.year || '—',
+        rating: item.ratingKinopoisk || item.rating || '—'
       };
     });
 
     return res.status(200).json({ results: formatted });
 
   } catch (err) {
-    return res.status(500).json({
-      error: true,
-      message: err.message || 'Ошибка сервера',
-      results: []
-    });
+    // Резервный поиск по англоязычной базе фильмов, если основной не ответил
+    try {
+      const fallbackUrl = `https://www.omdbapi.com/?apikey=trilogy&s=${encodeURIComponent(query)}&type=movie`;
+      const fallbackData = await fetchJson(fallbackUrl);
+      
+      const formattedFallback = (fallbackData.Search || []).map(item => ({
+        id: item.imdbID,
+        imdbId: item.imdbID,
+        title: item.Title,
+        poster: item.Poster !== 'N/A' ? item.Poster : 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки',
+        year: item.Year,
+        rating: '—'
+      }));
+
+      return res.status(200).json({ results: formattedFallback });
+    } catch (e) {
+      return res.status(200).json({ results: [] });
+    }
   }
 };
