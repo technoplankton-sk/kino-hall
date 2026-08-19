@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KINO HALL — Онлайн Кинотеатр</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
     body { background-color: #0f1115; color: #fff; min-height: 100vh; display: flex; flex-direction: column; }
     
-    .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 5%; background-color: #161920; border-bottom: 1px solid #222630; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 5%; background-color: #161920; border-bottom: 1px solid #222630; position: sticky; top: 0; z-index: 100; }
     .logo { font-size: 24px; font-weight: 700; cursor: pointer; }
     .logo span { color: #e50914; }
     
@@ -20,13 +19,16 @@
     button { padding: 10px 20px; border: none; border-radius: 8px; background-color: #e50914; color: #fff; font-weight: 600; cursor: pointer; }
     button:hover { background-color: #b80710; }
 
-    .container { flex: 1; padding: 40px 5%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-    .title { font-size: 28px; font-weight: 700; margin-bottom: 12px; }
-    .subtitle { color: #828899; max-width: 500px; line-height: 1.5; margin-bottom: 30px; }
+    .container { flex: 1; padding: 25px 5%; display: flex; flex-direction: column; }
+    .top-panel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+    .section-title { font-size: 18px; color: #a0a5b5; }
 
-    .source-buttons { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
-    .btn-source { padding: 14px 24px; border-radius: 10px; background: #161920; border: 1px solid #2d323f; color: #fff; font-weight: 600; text-decoration: none; transition: 0.2s; cursor: pointer; }
-    .btn-source:hover { border-color: #e50914; transform: translateY(-2px); }
+    .servers-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+    .server-btn { padding: 6px 14px; border-radius: 6px; background: #161920; border: 1px solid #2d323f; color: #a0a5b5; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .server-btn:hover, .server-btn.active { background: #e50914; color: #fff; border-color: #e50914; }
+
+    .player-frame { width: 100%; height: 650px; background-color: #161920; border-radius: 12px; border: 1px solid #222630; overflow: hidden; position: relative; }
+    iframe { width: 100%; height: 100%; border: none; }
   </style>
 </head>
 <body>
@@ -34,49 +36,74 @@
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Введите название фильма (Такси, Омен)...">
+      <input type="text" id="searchInput" placeholder="Введите фильм (Омен, Такси, Обитель зла)...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
 
   <main class="container">
-    <h1 class="title" id="displayTitle">Поиск фильмов без блокировок</h1>
-    <p class="subtitle" id="displaySub">Введи название фильма выше и выбери источник для мгновенного просмотра в HD качестве с русской или украинской озвучкой.</p>
+    <div class="top-panel">
+      <h2 class="section-title" id="sectionTitle">Онлайн-плеер</h2>
+      <div class="servers-bar" id="serversBar">
+        <button class="server-btn active" data-server="1">Сервер 1 (Collaps)</button>
+        <button class="server-btn" data-server="2">Сервер 2 (Alloha)</button>
+        <button class="server-btn" data-server="3">Сервер 3 (Voidboost)</button>
+        <button class="server-btn" data-server="4">Сервер 4 (EmbedSu)</button>
+        <button class="server-btn" data-server="5">Сервер 5 (Vidsrc)</button>
+      </div>
+    </div>
 
-    <div class="source-buttons" id="sourceBox" style="display: none;">
-      <a id="src1" class="btn-source" target="_blank">Смотреть на Источнике 1 (HDRezka)</a>
-      <a id="src2" class="btn-source" target="_blank">Смотреть на Источнике 2 (Kodik)</a>
-      <a id="src3" class="btn-source" target="_blank">Смотреть на Источнике 3 (UA Дубляж)</a>
+    <div class="player-frame">
+      <iframe id="mainPlayer" allowfullscreen></iframe>
     </div>
   </main>
 
   <script>
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
-    const displayTitle = document.getElementById('displayTitle');
-    const displaySub = document.getElementById('displaySub');
-    const sourceBox = document.getElementById('sourceBox');
-    const src1 = document.getElementById('src1');
-    const src2 = document.getElementById('src2');
-    const src3 = document.getElementById('src3');
+    const sectionTitle = document.getElementById('sectionTitle');
     const logoBtn = document.getElementById('logoBtn');
+    const mainPlayer = document.getElementById('mainPlayer');
+    const serverBtns = document.querySelectorAll('.server-btn');
 
-    function search(query) {
-      const q = query.trim();
-      if (!q) return;
+    let currentQuery = 'Омен';
+    let currentServer = '1';
 
-      displayTitle.textContent = `Результаты по запросу: "${q}"`;
-      displaySub.textContent = 'Выбери плеер для открытия фильма в новой вкладке без ошибок "сайт не отправил данных":';
-      sourceBox.style.display = 'flex';
-
-      src1.href = `https://rezka.ag/search/?do=search&subaction=search&story=${encodeURIComponent(q)}`;
-      src2.href = `https://kodik.cc/find-player?title=${encodeURIComponent(q)}`;
-      src3.href = `https://uafilm.pro/index.php?do=search&subaction=search&story=${encodeURIComponent(q)}`;
+    function getPlayerUrl(query, server) {
+      const q = encodeURIComponent(query);
+      switch(server) {
+        case '1': return `https://api.strhlp.com/search?query=${q}`;
+        case '2': return `https://kinoplayer.top/search?query=${q}`;
+        case '3': return `https://4395.svload.bar/search?query=${q}`;
+        case '4': return `https://embed.su/embed/movie/${q}`;
+        case '5': return `https://vidsrc.cc/v2/embed/movie/${q}`;
+        default: return `https://api.strhlp.com/search?query=${q}`;
+      }
     }
 
-    searchBtn.onclick = () => search(searchInput.value);
-    searchInput.onkeypress = (e) => { if (e.key === 'Enter') search(searchInput.value); };
-    logoBtn.onclick = () => location.reload();
+    function loadFilm(query, server) {
+      currentQuery = query.trim() || 'Омен';
+      currentServer = server;
+      
+      sectionTitle.textContent = `Поиск фильма: "${currentQuery}"`;
+      mainPlayer.src = getPlayerUrl(currentQuery, currentServer);
+
+      serverBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.server === currentServer);
+      });
+    }
+
+    // Кнопки переключения серверов
+    serverBtns.forEach(btn => {
+      btn.onclick = () => loadFilm(currentQuery, btn.dataset.server);
+    });
+
+    searchBtn.onclick = () => loadFilm(searchInput.value, currentServer);
+    searchInput.onkeypress = (e) => { if (e.key === 'Enter') loadFilm(searchInput.value, currentServer); };
+    logoBtn.onclick = () => { searchInput.value = ''; loadFilm('Омен', '1'); };
+
+    // Старт
+    loadFilm('Омен', '1');
   </script>
 </body>
 </html>
