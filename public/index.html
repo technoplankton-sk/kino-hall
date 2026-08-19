@@ -36,13 +36,13 @@
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Поиск фильма (рус, укр, eng)...">
+      <input type="text" id="searchInput" placeholder="Поиск фильма (например: Такси)...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
 
   <main class="container">
-    <h2 class="section-title" id="sectionTitle">Популярное сейчас</h2>
+    <h2 class="section-title" id="sectionTitle">Каталог фильмов</h2>
     <div id="moviesGrid" class="movies-grid"></div>
   </main>
 
@@ -69,23 +69,11 @@
     const modalTitle = document.getElementById('modalTitle');
     const logoBtn = document.getElementById('logoBtn');
 
-    getPopular();
-
-    async function getPopular() {
-      moviesGrid.innerHTML = '<p>Загрузка подборки...</p>';
-      try {
-        const res = await fetch('/api');
-        const data = await res.json();
-        sectionTitle.textContent = 'Популярное сейчас';
-        displayMovies(data.results || []);
-      } catch (err) {
-        moviesGrid.innerHTML = '<p style="color: #e50914;">Ошибка загрузки.</p>';
-      }
-    }
+    searchMovies('Такси');
 
     async function searchMovies(q) {
       if (!q.trim()) return;
-      moviesGrid.innerHTML = '<p>Ищем...</p>';
+      moviesGrid.innerHTML = '<p>Ищем фильмы...</p>';
       sectionTitle.textContent = `Результаты поиска: "${q}"`;
 
       try {
@@ -120,12 +108,9 @@
         card.onclick = () => {
           modalTitle.textContent = m.title;
           
-          // Стабильный международный плеер vidsrc.cc по IMDb ID / Названию (без блокировок)
-          if (typeof m.id === 'string' && m.id.startsWith('tt')) {
-            playerIframe.src = `https://vidsrc.cc/v2/embed/movie/${m.id}`;
-          } else {
-            playerIframe.src = `https://vidsrc.cc/v2/embed/tv/${m.id}`;
-          }
+          // Открываем плеер через стабильный рабочий эндпоинт vidsrc.icu (без блокировок)
+          const filmId = m.imdbId || m.id;
+          playerIframe.src = `https://vidsrc.icu/embed/movie/${filmId}`;
           
           movieModal.style.display = 'flex';
         };
@@ -136,7 +121,7 @@
     closeModal.onclick = () => { movieModal.style.display = 'none'; playerIframe.src = ''; };
     searchBtn.onclick = () => searchMovies(searchInput.value);
     searchInput.onkeypress = (e) => { if (e.key === 'Enter') searchMovies(searchInput.value); };
-    logoBtn.onclick = () => { searchInput.value = ''; getPopular(); };
+    logoBtn.onclick = () => { searchInput.value = ''; searchMovies('Такси'); };
   </script>
 </body>
 </html>
