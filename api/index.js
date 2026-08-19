@@ -33,36 +33,24 @@ module.exports = async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
 
   const { action, q } = req.query;
-  const query = q || 'омен';
+  const query = q || 'Омен';
 
   try {
-    // 1. Пробуем найти по локали ru-RU
+    // Один быстрый запрос к TMDB
     let searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&language=ru-RU&query=${encodeURIComponent(query)}`;
     let data = await fetchJson(searchUrl);
 
-    // 2. Если на русском не нашло, ищем без привязки к языку (для оригинальных названий)
     if (!data.results || data.results.length === 0) {
       searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}`;
       data = await fetchJson(searchUrl);
     }
 
-    // Получаем детали фильма (включая IMDb ID)
-    const formatted = await Promise.all((data.results || []).slice(0, 18).map(async (item) => {
-      let imdbId = null;
-      try {
-        const detailsUrl = `https://api.themoviedb.org/3/movie/${item.id}?api_key=${TMDB_KEY}`;
-        const details = await fetchJson(detailsUrl);
-        imdbId = details.imdb_id;
-      } catch (e) {}
-
-      return {
-        id: item.id,
-        imdbId: imdbId,
-        title: item.title || item.original_title || 'Без названия',
-        poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки',
-        year: item.release_date ? item.release_date.split('-')[0] : '—',
-        rating: item.vote_average ? item.vote_average.toFixed(1) : '—'
-      };
+    const formatted = (data.results || []).map(item => ({
+      id: item.id,
+      title: item.title || item.original_title || 'Без названия',
+      poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки',
+      year: item.release_date ? item.release_date.split('-')[0] : '—',
+      rating: item.vote_average ? item.vote_average.toFixed(1) : '—'
     }));
 
     return res.status(200).json({ results: formatted });
