@@ -249,7 +249,6 @@
   </div>
 
   <script>
-    // Используем открытый и протестированный API-ключ TMDB
     const API_KEY = '8c3d666b26ef8d52723228f52d38d820';
     const API_URL = 'https://api.themoviedb.org/3';
     const IMG_PATH = 'https://image.tmdb.org/t/p/w500';
@@ -287,21 +286,20 @@
       moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ищем...</p>';
 
       try {
-        // Запрос к TMDB API (работает без блокировок CORS)
-        let res = await fetch(`${API_URL}/search/multi?api_key=${API_KEY}&language=ru-RU&query=${encodeURIComponent(cleanQuery)}&include_adult=false`);
+        // Запрос к прямому поиску фильмов
+        let res = await fetch(`${API_URL}/search/movie?api_key=${API_KEY}&language=ru-RU&query=${encodeURIComponent(cleanQuery)}`);
         let data = await res.json();
+        let results = data.results || [];
 
-        let filtered = (data.results || []).filter(item => item.media_type === 'movie' || item.media_type === 'tv');
-
-        // Если не найдено по ru-RU локации, ищем по оригинальным наименованиям
-        if (filtered.length === 0) {
-          res = await fetch(`${API_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(cleanQuery)}&include_adult=false`);
+        // Если с локализацией ru-RU ничего не находит, запрашиваем без указания языка
+        if (results.length === 0) {
+          res = await fetch(`${API_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(cleanQuery)}`);
           data = await res.json();
-          filtered = (data.results || []).filter(item => item.media_type === 'movie' || item.media_type === 'tv');
+          results = data.results || [];
         }
 
         sectionTitle.textContent = `Результаты поиска: "${cleanQuery}"`;
-        displayMovies(filtered);
+        displayMovies(results);
       } catch (err) {
         console.error('Ошибка поиска:', err);
         moviesGrid.innerHTML = '<p style="grid-column: 1/-1; color: #e50914;">Ошибка сети. Обновите страницу.</p>';
@@ -348,7 +346,6 @@
       modalTitle.textContent = title;
       modalOverview.textContent = movie.overview || 'Описание фильма пока не добавлено.';
 
-      // Встраиваем балансер Kinobox через iframe по TMDB ID
       playerIframe.src = `https://kinobox.in/embed/tmdb-${movie.id}`;
       movieModal.style.display = 'flex';
     }
