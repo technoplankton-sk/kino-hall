@@ -1,6 +1,7 @@
 const https = require('https');
 
-const API_KEY = '3fd2be6f0cd0ed1635c61b9333f69e22';
+// Свежий рабочий ключ TMDB
+const API_KEY = '8c3d666b26ef8d52723228f52d38d820';
 
 function fetchTMDB(url) {
   return new Promise((resolve, reject) => {
