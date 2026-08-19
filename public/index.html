@@ -35,7 +35,7 @@
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Поиск фильма...">
+      <input type="text" id="searchInput" placeholder="Поиск фильма (рус, укр, eng)...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
@@ -66,16 +66,18 @@
     const closeModal = document.getElementById('closeModal');
     const playerIframe = document.getElementById('playerIframe');
     const modalTitle = document.getElementById('modalTitle');
+    const logoBtn = document.getElementById('logoBtn');
 
     getPopular();
 
     async function getPopular() {
       try {
-        const res = await fetch('/api/popular');
+        const res = await fetch('/api');
         const data = await res.json();
+        sectionTitle.textContent = 'Популярное сейчас';
         displayMovies(data.results || []);
       } catch (err) {
-        moviesGrid.innerHTML = '<p>Ошибка загрузки.</p>';
+        moviesGrid.innerHTML = '<p style="color: #e50914;">Ошибка загрузки подборки.</p>';
       }
     }
 
@@ -85,11 +87,11 @@
       sectionTitle.textContent = `Результаты поиска: "${q}"`;
 
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const res = await fetch(`/api?action=search&q=${encodeURIComponent(q)}`);
         const data = await res.json();
         displayMovies(data.results || []);
       } catch (err) {
-        moviesGrid.innerHTML = '<p>Ошибка поиска.</p>';
+        moviesGrid.innerHTML = '<p style="color: #e50914;">Ошибка поиска.</p>';
       }
     }
 
@@ -124,6 +126,7 @@
     closeModal.onclick = () => { movieModal.style.display = 'none'; playerIframe.src = ''; };
     searchBtn.onclick = () => searchMovies(searchInput.value);
     searchInput.onkeypress = (e) => { if (e.key === 'Enter') searchMovies(searchInput.value); };
+    logoBtn.onclick = () => { searchInput.value = ''; getPopular(); };
   </script>
 </body>
 </html>
