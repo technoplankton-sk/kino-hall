@@ -20,8 +20,6 @@
       background-color: #0f1115;
       color: #fff;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
     }
 
     .header {
@@ -31,6 +29,9 @@
       padding: 20px 5%;
       background-color: #161920;
       border-bottom: 1px solid #222630;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     .logo {
@@ -82,31 +83,128 @@
     }
 
     .container {
-      flex: 1;
-      padding: 25px 5%;
-      display: flex;
-      flex-direction: column;
+      padding: 30px 5%;
     }
 
     .section-title {
-      margin-bottom: 15px;
-      font-size: 18px;
+      margin-bottom: 20px;
+      font-size: 20px;
       color: #a0a5b5;
     }
 
-    .player-frame {
-      width: 100%;
-      height: 650px;
-      background-color: #161920;
-      border-radius: 12px;
-      border: 1px solid #222630;
-      overflow: hidden;
+    .movies-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 24px;
     }
 
-    iframe {
+    .movie-card {
+      background-color: #161920;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid #222630;
+    }
+
+    .movie-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      border-color: #3b4152;
+    }
+
+    .movie-card img {
+      width: 100%;
+      height: 270px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .movie-info {
+      padding: 12px;
+    }
+
+    .movie-title {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .movie-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #828899;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background-color: #161920;
+      width: 100%;
+      max-width: 900px;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid #2d323f;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 28px;
+      color: #a0a5b5;
+      cursor: pointer;
+      z-index: 10;
+      transition: color 0.2s;
+    }
+
+    .close-btn:hover {
+      color: #fff;
+    }
+
+    .player-container {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;
+      background-color: #000;
+    }
+
+    .player-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       border: none;
+    }
+
+    .modal-details {
+      padding: 24px;
+    }
+
+    .modal-title {
+      font-size: 22px;
+      margin-bottom: 8px;
     }
   </style>
 </head>
@@ -115,69 +213,127 @@
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Введите название (например: Такси)...">
+      <input type="text" id="searchInput" placeholder="Введите название фильма...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
 
   <main class="container">
-    <h2 class="section-title" id="sectionTitle">Онлайн Плеер</h2>
-    <div class="player-frame">
-      <!-- Атрибут sandbox="allow-scripts allow-same-origin" блокирует редиректы, вирусные окна и открытие левых сайтов -->
-      <iframe 
-        id="mainPlayer" 
-        src="https://voidboost.net/embed/243" 
-        allowfullscreen
-        sandbox="allow-scripts allow-same-origin allow-forms">
-      </iframe>
-    </div>
+    <h2 class="section-title" id="sectionTitle">Каталог фильмов</h2>
+    <div class="movies-grid" id="moviesGrid"></div>
   </main>
 
+  <div class="modal" id="movieModal">
+    <div class="modal-content">
+      <span class="close-btn" id="closeModal">&times;</span>
+      <div class="player-container">
+        <iframe id="playerIframe" src="" allowfullscreen></iframe>
+      </div>
+      <div class="modal-details">
+        <h2 class="modal-title" id="modalTitle"></h2>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // Встроенная локальная база популярных фильмов с прямыми ID Кинопоиска
+    const localDatabase = [
+      { id: '243', title: 'Такси 1', year: '1998', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/243.jpg' },
+      { id: '844', title: 'Такси 2', year: '2000', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/844.jpg' },
+      { id: '845', title: 'Такси 3', year: '2003', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/845.jpg' },
+      { id: '251546', title: 'Такси 4', year: '2007', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/251546.jpg' },
+      { id: '989016', title: 'Такси 5', year: '2018', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/989016.jpg' },
+      { id: '3862', title: 'Омен', year: '1976', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/3862.jpg' },
+      { id: '41519', title: 'Брат', year: '1997', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/41519.jpg' },
+      { id: '326', title: 'Побег из Шоушенка', year: '1994', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/326.jpg' },
+      { id: '435', title: 'Зеленая миля', year: '1999', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/435.jpg' },
+      { id: '448', title: 'Форрест Гамп', year: '1994', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/448.jpg' },
+      { id: '361', title: 'Бойцовский клуб', year: '1999', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/361.jpg' },
+      { id: '2360', title: 'Матрица', year: '1999', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/2360.jpg' }
+    ];
+
+    const moviesGrid = document.getElementById('moviesGrid');
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
     const sectionTitle = document.getElementById('sectionTitle');
     const logoBtn = document.getElementById('logoBtn');
-    const mainPlayer = document.getElementById('mainPlayer');
 
-    // База Kinopoisk ID для популярных запросов (работает без блокировок и без VPN)
-    const movieDatabase = {
-      'такси': '243',
-      'такси 1': '243',
-      'такси 2': '844',
-      'такси 3': '845',
-      'такси 4': '251546',
-      'такси 5': '989016',
-      'омен': '3862',
-      'брат': '41519',
-      'побег из шоушенка': '326',
-      'зеленая миля': '435'
-    };
+    const movieModal = document.getElementById('movieModal');
+    const closeModal = document.getElementById('closeModal');
+    const playerIframe = document.getElementById('playerIframe');
+    const modalTitle = document.getElementById('modalTitle');
 
-    function searchMovie(query) {
+    // Запуск каталога при загрузке
+    displayMovies(localDatabase);
+
+    function filterMovies(query) {
       const cleanQuery = query.trim().toLowerCase();
-      if (!cleanQuery) return;
-
-      sectionTitle.textContent = `Поиск фильма: "${query}"`;
-
-      // Проверяем точное совпадение из базы
-      if (movieDatabase[cleanQuery]) {
-        mainPlayer.src = `https://voidboost.net/embed/${movieDatabase[cleanQuery]}`;
-      } else {
-        // Поиск по названию через независимый плеер Voidboost
-        mainPlayer.src = `https://voidboost.net/embed/search?query=${encodeURIComponent(query)}`;
+      if (!cleanQuery) {
+        sectionTitle.textContent = 'Каталог фильмов';
+        displayMovies(localDatabase);
+        return;
       }
+
+      const filtered = localDatabase.filter(m => m.title.toLowerCase().includes(cleanQuery));
+      sectionTitle.textContent = `Результаты поиска: "${query}"`;
+      displayMovies(filtered);
     }
 
-    searchBtn.addEventListener('click', () => searchMovie(searchInput.value));
+    function displayMovies(movies) {
+      moviesGrid.innerHTML = '';
+
+      if (!movies || movies.length === 0) {
+        moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ничего не найдено в базе.</p>';
+        return;
+      }
+
+      movies.forEach(movie => {
+        const card = document.createElement('div');
+        card.classList.add('movie-card');
+        card.innerHTML = `
+          <img src="${movie.poster}" alt="${movie.title}" onerror="this.src='https://via.placeholder.com/500x750/161920/ffffff?text=${encodeURIComponent(movie.title)}'">
+          <div class="movie-info">
+            <div class="movie-title" title="${movie.title}">${movie.title}</div>
+            <div class="movie-meta">
+              <span>${movie.year}</span>
+            </div>
+          </div>
+        `;
+
+        card.addEventListener('click', () => openMoviePlayer(movie));
+        moviesGrid.appendChild(card);
+      });
+    }
+
+    function openMoviePlayer(movie) {
+      modalTitle.textContent = movie.title;
+
+      // Стабильный плеер Voidboost по Kinopoisk ID (без блокировок)
+      playerIframe.src = `https://voidboost.net/embed/${movie.id}`;
+      movieModal.style.display = 'flex';
+    }
+
+    closeModal.addEventListener('click', () => {
+      movieModal.style.display = 'none';
+      playerIframe.src = '';
+    });
+
+    window.addEventListener('click', (e) => {
+      if (e.target === movieModal) {
+        movieModal.style.display = 'none';
+        playerIframe.src = '';
+      }
+    });
+
+    searchBtn.addEventListener('click', () => filterMovies(searchInput.value));
     searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') searchMovie(searchInput.value);
+      if (e.key === 'Enter') filterMovies(searchInput.value);
     });
 
     logoBtn.addEventListener('click', () => {
       searchInput.value = '';
-      sectionTitle.textContent = 'Онлайн Плеер';
-      mainPlayer.src = 'https://voidboost.net/embed/243';
+      sectionTitle.textContent = 'Каталог фильмов';
+      displayMovies(localDatabase);
     });
   </script>
 </body>
