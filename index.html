@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KINO HALL — Онлайн Кинотеатр</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   
   <style>
@@ -29,6 +31,9 @@
       padding: 20px 5%;
       background-color: #161920;
       border-bottom: 1px solid #222630;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     .logo {
@@ -92,33 +97,37 @@
       color: #a0a5b5;
     }
 
-    .kinobox_player {
+    .player-frame {
       width: 100%;
-      height: 650px;
+      height: 680px;
       background-color: #161920;
       border-radius: 12px;
       border: 1px solid #222630;
       overflow: hidden;
     }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
   </style>
-  
-  <!-- Загружаем библиотеку Kinobox напрямую -->
-  <script src="https://kinobox.in/kinobox.min.js"></script>
 </head>
 <body>
 
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Введите название (Такси, Обитель зла, Омен)...">
+      <input type="text" id="searchInput" placeholder="Введите название (Омен, Такси, Обитель зла)...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
 
   <main class="container">
     <h2 class="section-title" id="sectionTitle">Онлайн-плеер</h2>
-    <!-- Контейнер для плеера Kinobox -->
-    <div class="kinobox_player"></div>
+    <div class="player-frame">
+      <iframe id="mainPlayer" src="https://4395.svload.bar/search?query=%D0%9E%D0%BC%D0%B5%D0%BD" allowfullscreen></iframe>
+    </div>
   </main>
 
   <script>
@@ -126,40 +135,28 @@
     const searchBtn = document.getElementById('searchBtn');
     const sectionTitle = document.getElementById('sectionTitle');
     const logoBtn = document.getElementById('logoBtn');
+    const mainPlayer = document.getElementById('mainPlayer');
 
-    function initPlayer(title) {
-      sectionTitle.textContent = `Поиск фильма: "${title}"`;
+    function searchMovie(query) {
+      const cleanQuery = query.trim();
+      if (!cleanQuery) return;
 
-      // Инициализация Kinobox с резервными зеркалами
-      new Kinobox('.kinobox_player', {
-        search: {
-          query: title
-        },
-        players: {
-          alloha: { enable: true, priority: 1 },
-          kodik: { enable: true, priority: 2 },
-          collaps: { enable: true, priority: 3 },
-          videocdn: { enable: true, priority: 4 }
-        }
-      }).init();
+      sectionTitle.textContent = `Поиск фильма: "${cleanQuery}"`;
+      
+      // Прямое обновление источника iframe без зависания JS
+      mainPlayer.src = `https://4395.svload.bar/search?query=${encodeURIComponent(cleanQuery)}`;
     }
 
-    // Запуск по умолчанию
-    initPlayer('Такси');
-
-    searchBtn.addEventListener('click', () => {
-      if (searchInput.value.trim()) initPlayer(searchInput.value.trim());
-    });
-
+    searchBtn.addEventListener('click', () => searchMovie(searchInput.value));
+    
     searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && searchInput.value.trim()) {
-        initPlayer(searchInput.value.trim());
-      }
+      if (e.key === 'Enter') searchMovie(searchInput.value);
     });
 
     logoBtn.addEventListener('click', () => {
       searchInput.value = '';
-      initPlayer('Такси');
+      sectionTitle.textContent = 'Онлайн-плеер';
+      mainPlayer.src = 'https://4395.svload.bar/search?query=%D0%9E%D0%BC%D0%B5%D0%BD';
     });
   </script>
 </body>
