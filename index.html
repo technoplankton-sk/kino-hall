@@ -252,6 +252,9 @@
     const API_KEY = '8c3d666b26ef8d52723228f52d38d820';
     const API_URL = 'https://api.themoviedb.org/3';
     const IMG_PATH = 'https://image.tmdb.org/t/p/w500';
+    
+    // Публичный CORS-прокси для обхода провайдерских блокировок
+    const PROXY = 'https://api.allorigins.win/raw?url=';
 
     const moviesGrid = document.getElementById('moviesGrid');
     const searchInput = document.getElementById('searchInput');
@@ -267,14 +270,27 @@
 
     getPopularMovies();
 
+    async function safeFetch(targetUrl) {
+      // Сначала пробуем прямой запрос, если режется — запускаем через прокси
+      try {
+        const res = await fetch(targetUrl);
+        if (res.ok) return await res.json();
+      } catch (e) {}
+
+      const proxyUrl = `${PROXY}${encodeURIComponent(targetUrl)}`;
+      const resProxy = await fetch(proxyUrl);
+      return await resProxy.json();
+    }
+
     async function getPopularMovies() {
       try {
-        const res = await fetch(`${API_URL}/movie/popular?api_key=${API_KEY}&language=ru-RU&page=1`);
-        const data = await res.json();
+        const url = `${API_URL}/movie/popular?api_key=${API_KEY}&language=ru-RU&page=1`;
+        const data = await safeFetch(url);
         sectionTitle.textContent = 'Популярное сейчас';
         displayMovies(data.results || []);
       } catch (err) {
         console.error('Ошибка:', err);
+        moviesGrid.innerHTML = '<p style="grid-column: 1/-1; color: #e50914;">Не удалось загрузить данные. Проверьте интернет или включите VPN.</p>';
       }
     }
 
@@ -285,20 +301,21 @@
       moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ищем...</p>';
 
       try {
-        const res = await fetch(`${API_URL}/search/movie?api_key=${API_KEY}&language=ru-RU&query=${encodeURIComponent(cleanQuery)}`);
-        const data = await res.json();
+        let url = `${API_URL}/search/movie?api_key=${API_KEY}&language=ru-RU&query=${encodeURIComponent(cleanQuery)}`;
+        let data = await safeFetch(url);
         let results = data.results || [];
 
         if (results.length === 0) {
-          const resAlt = await fetch(`${API_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(cleanQuery)}`);
-          const dataAlt = await resAlt.json();
-          results = dataAlt.results || [];
+          url = `${API_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(cleanQuery)}`;
+          data = await safeFetch(url);
+          results = data.results || [];
         }
 
         sectionTitle.textContent = `Результаты поиска: "${cleanQuery}"`;
         displayMovies(results);
       } catch (err) {
         console.error('Ошибка:', err);
+        moviesGrid.innerHTML = '<p style="grid-column: 1/-1; color: #e50914;">Ошибка поиска. Попробуйте обновить страницу.</p>';
       }
     }
 
@@ -342,7 +359,7 @@
       modalTitle.textContent = title;
       modalOverview.textContent = movie.overview || 'Описание фильма пока не добавлено.';
 
-      // Подключаем международный зеркальный плеер vidsrc.pro по TMDB ID
+      // Используем зеркальный плеер vidsrc.pro
       playerIframe.src = `https://vidsrc.pro/embed/movie/${movie.id}`;
       movieModal.style.display = 'flex';
     }
