@@ -84,6 +84,8 @@
 
     .container {
       padding: 30px 5%;
+      max-width: 1200px;
+      margin: 0 auto;
     }
 
     .section-title {
@@ -92,131 +94,19 @@
       color: #a0a5b5;
     }
 
-    .movies-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 24px;
-    }
-
-    .movie-card {
+    .player-frame {
+      width: 100%;
+      height: 650px;
       background-color: #161920;
       border-radius: 12px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
       border: 1px solid #222630;
-    }
-
-    .movie-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-      border-color: #3b4152;
-    }
-
-    .movie-card img {
-      width: 100%;
-      height: 270px;
-      object-fit: cover;
-      display: block;
-    }
-
-    .movie-info {
-      padding: 12px;
-    }
-
-    .movie-title {
-      font-size: 14px;
-      font-weight: 600;
-      white-space: nowrap;
       overflow: hidden;
-      text-overflow: ellipsis;
     }
 
-    .movie-meta {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 8px;
-      font-size: 12px;
-      color: #828899;
-    }
-
-    .rating {
-      color: #ffc107;
-      font-weight: 600;
-    }
-
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.85);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-      backdrop-filter: blur(5px);
-    }
-
-    .modal-content {
-      background-color: #161920;
-      width: 100%;
-      max-width: 900px;
-      border-radius: 16px;
-      overflow: hidden;
-      position: relative;
-      border: 1px solid #2d323f;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-
-    .close-btn {
-      position: absolute;
-      top: 15px;
-      right: 20px;
-      font-size: 28px;
-      color: #a0a5b5;
-      cursor: pointer;
-      z-index: 10;
-      transition: color 0.2s;
-    }
-
-    .close-btn:hover {
-      color: #fff;
-    }
-
-    .player-container {
-      position: relative;
-      width: 100%;
-      padding-top: 56.25%;
-      background-color: #000;
-    }
-
-    .player-container iframe {
-      position: absolute;
-      top: 0;
-      left: 0;
+    iframe {
       width: 100%;
       height: 100%;
       border: none;
-    }
-
-    .modal-details {
-      padding: 24px;
-    }
-
-    .modal-title {
-      font-size: 22px;
-      margin-bottom: 8px;
-    }
-
-    .modal-overview {
-      font-size: 14px;
-      color: #a0a5b5;
-      line-height: 1.6;
-      margin-top: 12px;
     }
   </style>
 </head>
@@ -225,151 +115,44 @@
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Поиск фильма (рус, укр, eng)...">
+      <input type="text" id="searchInput" placeholder="Введите название фильма...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
 
   <main class="container">
-    <h2 class="section-title" id="sectionTitle">Популярное сейчас</h2>
-    <div class="movies-grid" id="moviesGrid"></div>
+    <h2 class="section-title" id="sectionTitle">Онлайн плеер и поиск</h2>
+    <div class="player-frame">
+      <iframe id="mainIframe" src="https://kinobox.in/embed/kp-243" allowfullscreen></iframe>
+    </div>
   </main>
 
-  <div class="modal" id="movieModal">
-    <div class="modal-content">
-      <span class="close-btn" id="closeModal">&times;</span>
-      <div class="player-container">
-        <iframe id="playerIframe" src="" allowfullscreen></iframe>
-      </div>
-      <div class="modal-details">
-        <h2 class="modal-title" id="modalTitle"></h2>
-        <p class="modal-overview" id="modalOverview"></p>
-      </div>
-    </div>
-  </div>
-
   <script>
-    const API_KEY = '8c3d666b26ef8d52723228f52d38d820';
-    const API_URL = 'https://api.themoviedb.org/3';
-    const IMG_PATH = 'https://image.tmdb.org/t/p/w500';
-
-    const moviesGrid = document.getElementById('moviesGrid');
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
     const sectionTitle = document.getElementById('sectionTitle');
     const logoBtn = document.getElementById('logoBtn');
+    const mainIframe = document.getElementById('mainIframe');
 
-    const movieModal = document.getElementById('movieModal');
-    const closeModal = document.getElementById('closeModal');
-    const playerIframe = document.getElementById('playerIframe');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalOverview = document.getElementById('modalOverview');
-
-    getPopularMovies();
-
-    async function getPopularMovies() {
-      try {
-        const res = await fetch(`${API_URL}/movie/popular?api_key=${API_KEY}&language=ru-RU&page=1`);
-        const data = await res.json();
-        sectionTitle.textContent = 'Популярное сейчас';
-        displayMovies(data.results || []);
-      } catch (err) {
-        console.error('Ошибка:', err);
-        moviesGrid.innerHTML = '<p style="grid-column: 1/-1; color: #e50914;">Ошибка загрузки подборки.</p>';
-      }
-    }
-
-    async function searchMovies(query) {
+    function performSearch(query) {
       const cleanQuery = query.trim();
       if (!cleanQuery) return;
 
-      moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ищем...</p>';
-
-      try {
-        // Запрос к прямому поиску фильмов
-        let res = await fetch(`${API_URL}/search/movie?api_key=${API_KEY}&language=ru-RU&query=${encodeURIComponent(cleanQuery)}`);
-        let data = await res.json();
-        let results = data.results || [];
-
-        // Если с локализацией ru-RU ничего не находит, запрашиваем без указания языка
-        if (results.length === 0) {
-          res = await fetch(`${API_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(cleanQuery)}`);
-          data = await res.json();
-          results = data.results || [];
-        }
-
-        sectionTitle.textContent = `Результаты поиска: "${cleanQuery}"`;
-        displayMovies(results);
-      } catch (err) {
-        console.error('Ошибка поиска:', err);
-        moviesGrid.innerHTML = '<p style="grid-column: 1/-1; color: #e50914;">Ошибка сети. Обновите страницу.</p>';
-      }
+      sectionTitle.textContent = `Поиск фильма: "${cleanQuery}"`;
+      
+      // Используем прямую встроенную поисковую страницу балансера по названию
+      mainIframe.src = `https://kinobox.in/embed/search?query=${encodeURIComponent(cleanQuery)}`;
     }
 
-    function displayMovies(movies) {
-      moviesGrid.innerHTML = '';
-
-      if (!movies || movies.length === 0) {
-        moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ничего не найдено :( Попробуйте другое название.</p>';
-        return;
-      }
-
-      movies.forEach(movie => {
-        const title = movie.title || movie.name || movie.original_title || 'Без названия';
-        const releaseDate = movie.release_date || movie.first_air_date || '';
-        const year = releaseDate ? releaseDate.split('-')[0] : '—';
-        const rating = movie.vote_average ? movie.vote_average.toFixed(1) : '—';
-        const poster = movie.poster_path 
-          ? IMG_PATH + movie.poster_path 
-          : 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки';
-
-        const card = document.createElement('div');
-        card.classList.add('movie-card');
-        card.innerHTML = `
-          <img src="${poster}" alt="${title}">
-          <div class="movie-info">
-            <div class="movie-title" title="${title}">${title}</div>
-            <div class="movie-meta">
-              <span>${year}</span>
-              <span class="rating">★ ${rating}</span>
-            </div>
-          </div>
-        `;
-
-        card.addEventListener('click', () => openMoviePlayer(movie));
-        moviesGrid.appendChild(card);
-      });
-    }
-
-    function openMoviePlayer(movie) {
-      const title = movie.title || movie.name || movie.original_title;
-      modalTitle.textContent = title;
-      modalOverview.textContent = movie.overview || 'Описание фильма пока не добавлено.';
-
-      playerIframe.src = `https://kinobox.in/embed/tmdb-${movie.id}`;
-      movieModal.style.display = 'flex';
-    }
-
-    closeModal.addEventListener('click', () => {
-      movieModal.style.display = 'none';
-      playerIframe.src = '';
-    });
-
-    window.addEventListener('click', (e) => {
-      if (e.target === movieModal) {
-        movieModal.style.display = 'none';
-        playerIframe.src = '';
-      }
-    });
-
-    searchBtn.addEventListener('click', () => searchMovies(searchInput.value));
+    searchBtn.addEventListener('click', () => performSearch(searchInput.value));
     searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') searchMovies(searchInput.value);
+      if (e.key === 'Enter') performSearch(searchInput.value);
     });
 
     logoBtn.addEventListener('click', () => {
       searchInput.value = '';
-      getPopularMovies();
+      sectionTitle.textContent = 'Онлайн плеер';
+      mainIframe.src = 'https://kinobox.in/embed/kp-243';
     });
   </script>
 </body>
