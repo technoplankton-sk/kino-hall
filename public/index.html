@@ -71,6 +71,7 @@
     getPopular();
 
     async function getPopular() {
+      moviesGrid.innerHTML = '<p>Загрузка подборки...</p>';
       try {
         const res = await fetch('/api');
         const data = await res.json();
@@ -97,13 +98,13 @@
 
     function displayMovies(movies) {
       moviesGrid.innerHTML = '';
-      if (!movies.length) {
+      if (!movies || !movies.length) {
         moviesGrid.innerHTML = '<p>Ничего не найдено.</p>';
         return;
       }
 
       movies.forEach(m => {
-        const title = m.title || m.original_title;
+        const title = m.title || m.original_title || 'Без названия';
         const poster = m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки';
         
         const card = document.createElement('div');
