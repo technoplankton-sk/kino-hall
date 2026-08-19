@@ -115,15 +115,15 @@
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Поиск фильма (например: Такси)...">
+      <input type="text" id="searchInput" placeholder="Введите название (например: Такси)...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
 
   <main class="container">
-    <h2 class="section-title" id="sectionTitle">Плеер</h2>
+    <h2 class="section-title" id="sectionTitle">Онлайн-плеер</h2>
     <div class="player-frame">
-      <iframe id="mainPlayer" src="https://vidsrc.me/embed/movie?imdb=tt0152930" allowfullscreen></iframe>
+      <iframe id="mainPlayer" src="https://kodik.cc/find-player?title=%D0%A2%D0%B0%D0%BA%D1%81%D0%B8" allowfullscreen></iframe>
     </div>
   </main>
 
@@ -140,8 +140,8 @@
 
       sectionTitle.textContent = `Поиск фильма: "${cleanQuery}"`;
       
-      // Вызываем универсальный эндпоинт vidsrc.me с автопоиском по названию
-      mainPlayer.src = `https://vidsrc.me/embed/movie?title=${encodeURIComponent(cleanQuery)}`;
+      // Вызываем официальный поисковый плеер Kodik по названию
+      mainPlayer.src = `https://kodik.cc/find-player?title=${encodeURIComponent(cleanQuery)}`;
     }
 
     searchBtn.addEventListener('click', () => searchMovie(searchInput.value));
@@ -151,8 +151,8 @@
 
     logoBtn.addEventListener('click', () => {
       searchInput.value = '';
-      sectionTitle.textContent = 'Плеер';
-      mainPlayer.src = 'https://vidsrc.me/embed/movie?imdb=tt0152930';
+      sectionTitle.textContent = 'Онлайн-плеер';
+      mainPlayer.src = 'https://kodik.cc/find-player?title=%D0%A2%D0%B0%D0%BA%D1%81%D0%B8';
     });
   </script>
 </body>
