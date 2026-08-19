@@ -36,7 +36,7 @@
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Поиск фильма (рус, укр, eng)...">
+      <input type="text" id="searchInput" placeholder="Поиск фильма (например: Такси)...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
@@ -69,26 +69,25 @@
     const modalTitle = document.getElementById('modalTitle');
     const logoBtn = document.getElementById('logoBtn');
 
-    searchMovies('Омен');
+    loadMovies('');
 
-    async function searchMovies(q) {
-      if (!q.trim()) return;
-      moviesGrid.innerHTML = '<p>Ищем фильмы...</p>';
-      sectionTitle.textContent = `Результаты поиска: "${q}"`;
+    async function loadMovies(q) {
+      moviesGrid.innerHTML = '<p>Загрузка...</p>';
+      sectionTitle.textContent = q ? `Результаты поиска: "${q}"` : 'Каталог фильмов';
 
       try {
-        const res = await fetch(`/api?action=search&q=${encodeURIComponent(q)}`);
+        const res = await fetch(`/api?q=${encodeURIComponent(q)}`);
         const data = await res.json();
         displayMovies(data.results || []);
       } catch (err) {
-        moviesGrid.innerHTML = '<p style="color: #e50914;">Ошибка поиска.</p>';
+        moviesGrid.innerHTML = '<p style="color: #e50914;">Ошибка загрузки каталога.</p>';
       }
     }
 
     function displayMovies(movies) {
       moviesGrid.innerHTML = '';
       if (!movies || !movies.length) {
-        moviesGrid.innerHTML = '<p>Ничего не найдено.</p>';
+        moviesGrid.innerHTML = '<p>Ничего не найдено в базе.</p>';
         return;
       }
 
@@ -96,19 +95,18 @@
         const card = document.createElement('div');
         card.className = 'movie-card';
         card.innerHTML = `
-          <img src="${m.poster}" alt="${m.title}" onerror="this.src='https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки'">
+          <img src="${m.poster}" alt="${m.title}" onerror="this.src='https://via.placeholder.com/500x750/161920/ffffff?text=${encodeURIComponent(m.title)}'">
           <div class="movie-info">
             <div class="movie-title">${m.title}</div>
             <div class="movie-meta">
               <span>${m.year}</span>
-              <span>★ ${m.rating}</span>
             </div>
           </div>
         `;
         card.onclick = () => {
           modalTitle.textContent = m.title;
-          // Прямой запуск плеера embed.su по TMDB ID
-          playerIframe.src = `https://embed.su/embed/movie/${m.id}`;
+          // Плеер открывается по прямому Kinopoisk ID
+          playerIframe.src = `https://api.strhlp.com/embed/movie/${m.id}`;
           movieModal.style.display = 'flex';
         };
         moviesGrid.appendChild(card);
@@ -116,9 +114,9 @@
     }
 
     closeModal.onclick = () => { movieModal.style.display = 'none'; playerIframe.src = ''; };
-    searchBtn.onclick = () => searchMovies(searchInput.value);
-    searchInput.onkeypress = (e) => { if (e.key === 'Enter') searchMovies(searchInput.value); };
-    logoBtn.onclick = () => { searchInput.value = ''; searchMovies('Омен'); };
+    searchBtn.onclick = () => loadMovies(searchInput.value);
+    searchInput.onkeypress = (e) => { if (e.key === 'Enter') loadMovies(searchInput.value); };
+    logoBtn.onclick = () => { searchInput.value = ''; loadMovies(''); };
   </script>
 </body>
 </html>
