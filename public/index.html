@@ -107,14 +107,8 @@
         `;
         card.onclick = () => {
           modalTitle.textContent = m.title;
-          
-          // Запускаем через стабильное рабочее зеркало embed.su по TMDB / IMDb ID
-          if (m.imdbId) {
-            playerIframe.src = `https://embed.su/embed/movie/${m.imdbId}`;
-          } else {
-            playerIframe.src = `https://embed.su/embed/movie/${m.id}`;
-          }
-          
+          // Прямой запуск плеера embed.su по TMDB ID
+          playerIframe.src = `https://embed.su/embed/movie/${m.id}`;
           movieModal.style.display = 'flex';
         };
         moviesGrid.appendChild(card);
