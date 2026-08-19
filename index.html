@@ -4,113 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KINO HALL — Онлайн Кинотеатр</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Inter', sans-serif;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: #0f1115; color: #fff; min-height: 100vh; display: flex; flex-direction: column; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 5%; background-color: #161920; border-bottom: 1px solid #222630; }
+    .logo { font-size: 24px; font-weight: 700; cursor: pointer; }
+    .logo span { color: #e50914; }
+    
+    .search-box { display: flex; gap: 10px; width: 100%; max-width: 450px; }
+    input { width: 100%; padding: 10px 16px; border-radius: 8px; border: 1px solid #2d323f; background-color: #0f1115; color: #fff; outline: none; font-size: 15px; }
+    input:focus { border-color: #e50914; }
+    button { padding: 10px 20px; border: none; border-radius: 8px; background-color: #e50914; color: #fff; font-weight: 600; cursor: pointer; }
+    button:hover { background-color: #b80710; }
 
-    body {
-      background-color: #0f1115;
-      color: #fff;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+    .container { flex: 1; padding: 40px 5%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .title { font-size: 28px; font-weight: 700; margin-bottom: 12px; }
+    .subtitle { color: #828899; max-width: 500px; line-height: 1.5; margin-bottom: 30px; }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px 5%;
-      background-color: #161920;
-      border-bottom: 1px solid #222630;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .logo {
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      cursor: pointer;
-    }
-
-    .logo span {
-      color: #e50914;
-    }
-
-    .search-box {
-      display: flex;
-      gap: 10px;
-      width: 100%;
-      max-width: 450px;
-    }
-
-    .search-box input {
-      width: 100%;
-      padding: 10px 16px;
-      border-radius: 8px;
-      border: 1px solid #2d323f;
-      background-color: #0f1115;
-      color: #fff;
-      outline: none;
-      font-size: 15px;
-    }
-
-    .search-box input:focus {
-      border-color: #e50914;
-    }
-
-    .search-box button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      background-color: #e50914;
-      color: #fff;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .search-box button:hover {
-      background-color: #b80710;
-    }
-
-    .container {
-      flex: 1;
-      padding: 25px 5%;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .section-title {
-      margin-bottom: 15px;
-      font-size: 18px;
-      color: #a0a5b5;
-    }
-
-    .player-frame {
-      width: 100%;
-      height: 680px;
-      background-color: #161920;
-      border-radius: 12px;
-      border: 1px solid #222630;
-      overflow: hidden;
-    }
-
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
+    .source-buttons { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+    .btn-source { padding: 14px 24px; border-radius: 10px; background: #161920; border: 1px solid #2d323f; color: #fff; font-weight: 600; text-decoration: none; transition: 0.2s; cursor: pointer; }
+    .btn-source:hover { border-color: #e50914; transform: translateY(-2px); }
   </style>
 </head>
 <body>
@@ -118,46 +34,49 @@
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Введите название (Омен, Такси, Обитель зла)...">
+      <input type="text" id="searchInput" placeholder="Введите название фильма (Такси, Омен)...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
 
   <main class="container">
-    <h2 class="section-title" id="sectionTitle">Онлайн-плеер</h2>
-    <div class="player-frame">
-      <iframe id="mainPlayer" src="https://4395.svload.bar/search?query=%D0%9E%D0%BC%D0%B5%D0%BD" allowfullscreen></iframe>
+    <h1 class="title" id="displayTitle">Поиск фильмов без блокировок</h1>
+    <p class="subtitle" id="displaySub">Введи название фильма выше и выбери источник для мгновенного просмотра в HD качестве с русской или украинской озвучкой.</p>
+
+    <div class="source-buttons" id="sourceBox" style="display: none;">
+      <a id="src1" class="btn-source" target="_blank">Смотреть на Источнике 1 (HDRezka)</a>
+      <a id="src2" class="btn-source" target="_blank">Смотреть на Источнике 2 (Kodik)</a>
+      <a id="src3" class="btn-source" target="_blank">Смотреть на Источнике 3 (UA Дубляж)</a>
     </div>
   </main>
 
   <script>
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
-    const sectionTitle = document.getElementById('sectionTitle');
+    const displayTitle = document.getElementById('displayTitle');
+    const displaySub = document.getElementById('displaySub');
+    const sourceBox = document.getElementById('sourceBox');
+    const src1 = document.getElementById('src1');
+    const src2 = document.getElementById('src2');
+    const src3 = document.getElementById('src3');
     const logoBtn = document.getElementById('logoBtn');
-    const mainPlayer = document.getElementById('mainPlayer');
 
-    function searchMovie(query) {
-      const cleanQuery = query.trim();
-      if (!cleanQuery) return;
+    function search(query) {
+      const q = query.trim();
+      if (!q) return;
 
-      sectionTitle.textContent = `Поиск фильма: "${cleanQuery}"`;
-      
-      // Прямое обновление источника iframe без зависания JS
-      mainPlayer.src = `https://4395.svload.bar/search?query=${encodeURIComponent(cleanQuery)}`;
+      displayTitle.textContent = `Результаты по запросу: "${q}"`;
+      displaySub.textContent = 'Выбери плеер для открытия фильма в новой вкладке без ошибок "сайт не отправил данных":';
+      sourceBox.style.display = 'flex';
+
+      src1.href = `https://rezka.ag/search/?do=search&subaction=search&story=${encodeURIComponent(q)}`;
+      src2.href = `https://kodik.cc/find-player?title=${encodeURIComponent(q)}`;
+      src3.href = `https://uafilm.pro/index.php?do=search&subaction=search&story=${encodeURIComponent(q)}`;
     }
 
-    searchBtn.addEventListener('click', () => searchMovie(searchInput.value));
-    
-    searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') searchMovie(searchInput.value);
-    });
-
-    logoBtn.addEventListener('click', () => {
-      searchInput.value = '';
-      sectionTitle.textContent = 'Онлайн-плеер';
-      mainPlayer.src = 'https://4395.svload.bar/search?query=%D0%9E%D0%BC%D0%B5%D0%BD';
-    });
+    searchBtn.onclick = () => search(searchInput.value);
+    searchInput.onkeypress = (e) => { if (e.key === 'Enter') search(searchInput.value); };
+    logoBtn.onclick = () => location.reload();
   </script>
 </body>
 </html>
