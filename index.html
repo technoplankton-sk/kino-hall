@@ -140,6 +140,11 @@
       color: #828899;
     }
 
+    .rating {
+      color: #ffc107;
+      font-weight: 600;
+    }
+
     .modal {
       display: none;
       position: fixed;
@@ -213,13 +218,13 @@
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Введите название фильма...">
+      <input type="text" id="searchInput" placeholder="Поиск фильма (рус, укр, eng)...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
 
   <main class="container">
-    <h2 class="section-title" id="sectionTitle">Каталог фильмов</h2>
+    <h2 class="section-title" id="sectionTitle">Популярное сейчас</h2>
     <div class="movies-grid" id="moviesGrid"></div>
   </main>
 
@@ -236,21 +241,9 @@
   </div>
 
   <script>
-    // Встроенная локальная база популярных фильмов с прямыми ID Кинопоиска
-    const localDatabase = [
-      { id: '243', title: 'Такси 1', year: '1998', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/243.jpg' },
-      { id: '844', title: 'Такси 2', year: '2000', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/844.jpg' },
-      { id: '845', title: 'Такси 3', year: '2003', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/845.jpg' },
-      { id: '251546', title: 'Такси 4', year: '2007', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/251546.jpg' },
-      { id: '989016', title: 'Такси 5', year: '2018', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/989016.jpg' },
-      { id: '3862', title: 'Омен', year: '1976', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/3862.jpg' },
-      { id: '41519', title: 'Брат', year: '1997', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/41519.jpg' },
-      { id: '326', title: 'Побег из Шоушенка', year: '1994', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/326.jpg' },
-      { id: '435', title: 'Зеленая миля', year: '1999', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/435.jpg' },
-      { id: '448', title: 'Форрест Гамп', year: '1994', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/448.jpg' },
-      { id: '361', title: 'Бойцовский клуб', year: '1999', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/361.jpg' },
-      { id: '2360', title: 'Матрица', year: '1999', poster: 'https://kinopoiskapiuncensored.net/images/posters/kp/2360.jpg' }
-    ];
+    const API_KEY = '3fd2be6f0cd0ed1635c61b9333f69e22';
+    const API_URL = 'https://api.themoviedb.org/3';
+    const IMG_PATH = 'https://image.tmdb.org/t/p/w500';
 
     const moviesGrid = document.getElementById('moviesGrid');
     const searchInput = document.getElementById('searchInput');
@@ -263,39 +256,69 @@
     const playerIframe = document.getElementById('playerIframe');
     const modalTitle = document.getElementById('modalTitle');
 
-    // Запуск каталога при загрузке
-    displayMovies(localDatabase);
+    getPopularMovies();
 
-    function filterMovies(query) {
-      const cleanQuery = query.trim().toLowerCase();
-      if (!cleanQuery) {
-        sectionTitle.textContent = 'Каталог фильмов';
-        displayMovies(localDatabase);
-        return;
+    async function getPopularMovies() {
+      try {
+        const res = await fetch(`${API_URL}/movie/popular?api_key=${API_KEY}&language=ru-RU&page=1`);
+        const data = await res.json();
+        sectionTitle.textContent = 'Популярное сейчас';
+        displayMovies(data.results || []);
+      } catch (err) {
+        console.error('Ошибка:', err);
       }
+    }
 
-      const filtered = localDatabase.filter(m => m.title.toLowerCase().includes(cleanQuery));
-      sectionTitle.textContent = `Результаты поиска: "${query}"`;
-      displayMovies(filtered);
+    async function searchMovies(query) {
+      const cleanQuery = query.trim();
+      if (!cleanQuery) return;
+
+      moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ищем...</p>';
+
+      try {
+        let res = await fetch(`${API_URL}/search/movie?api_key=${API_KEY}&language=ru-RU&query=${encodeURIComponent(cleanQuery)}`);
+        let data = await res.json();
+        let results = data.results || [];
+
+        if (results.length === 0) {
+          res = await fetch(`${API_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(cleanQuery)}`);
+          data = await res.json();
+          results = data.results || [];
+        }
+
+        sectionTitle.textContent = `Результаты поиска: "${cleanQuery}"`;
+        displayMovies(results);
+      } catch (err) {
+        console.error('Ошибка:', err);
+      }
     }
 
     function displayMovies(movies) {
       moviesGrid.innerHTML = '';
 
       if (!movies || movies.length === 0) {
-        moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ничего не найдено в базе.</p>';
+        moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ничего не найдено :( Попробуйте другое название.</p>';
         return;
       }
 
       movies.forEach(movie => {
+        const title = movie.title || movie.original_title || 'Без названия';
+        const releaseDate = movie.release_date || '';
+        const year = releaseDate ? releaseDate.split('-')[0] : '—';
+        const rating = movie.vote_average ? movie.vote_average.toFixed(1) : '—';
+        const poster = movie.poster_path 
+          ? IMG_PATH + movie.poster_path 
+          : 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки';
+
         const card = document.createElement('div');
         card.classList.add('movie-card');
         card.innerHTML = `
-          <img src="${movie.poster}" alt="${movie.title}" onerror="this.src='https://via.placeholder.com/500x750/161920/ffffff?text=${encodeURIComponent(movie.title)}'">
+          <img src="${poster}" alt="${title}">
           <div class="movie-info">
-            <div class="movie-title" title="${movie.title}">${movie.title}</div>
+            <div class="movie-title" title="${title}">${title}</div>
             <div class="movie-meta">
-              <span>${movie.year}</span>
+              <span>${year}</span>
+              <span class="rating">★ ${rating}</span>
             </div>
           </div>
         `;
@@ -306,10 +329,10 @@
     }
 
     function openMoviePlayer(movie) {
-      modalTitle.textContent = movie.title;
+      modalTitle.textContent = movie.title || movie.original_title;
 
-      // Стабильный плеер Voidboost по Kinopoisk ID (без блокировок)
-      playerIframe.src = `https://voidboost.net/embed/${movie.id}`;
+      // Используем доступное зеркало Alloha / Collaps по TMDB ID
+      playerIframe.src = `https://23.stikino.one/embed/tmdb/${movie.id}`;
       movieModal.style.display = 'flex';
     }
 
@@ -325,15 +348,14 @@
       }
     });
 
-    searchBtn.addEventListener('click', () => filterMovies(searchInput.value));
+    searchBtn.addEventListener('click', () => searchMovies(searchInput.value));
     searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') filterMovies(searchInput.value);
+      if (e.key === 'Enter') searchMovies(searchInput.value);
     });
 
     logoBtn.addEventListener('click', () => {
       searchInput.value = '';
-      sectionTitle.textContent = 'Каталог фильмов';
-      displayMovies(localDatabase);
+      getPopularMovies();
     });
   </script>
 </body>
