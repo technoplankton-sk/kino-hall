@@ -36,7 +36,7 @@
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Поиск фильма (например: Такси)...">
+      <input type="text" id="searchInput" placeholder="Поиск фильма (рус, укр, eng)...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
@@ -69,7 +69,7 @@
     const modalTitle = document.getElementById('modalTitle');
     const logoBtn = document.getElementById('logoBtn');
 
-    searchMovies('Такси');
+    searchMovies('Омен');
 
     async function searchMovies(q) {
       if (!q.trim()) return;
@@ -108,9 +108,12 @@
         card.onclick = () => {
           modalTitle.textContent = m.title;
           
-          // Открываем плеер через стабильный рабочий эндпоинт vidsrc.icu (без блокировок)
-          const filmId = m.imdbId || m.id;
-          playerIframe.src = `https://vidsrc.icu/embed/movie/${filmId}`;
+          // Запускаем через стабильное рабочее зеркало embed.su по TMDB / IMDb ID
+          if (m.imdbId) {
+            playerIframe.src = `https://embed.su/embed/movie/${m.imdbId}`;
+          } else {
+            playerIframe.src = `https://embed.su/embed/movie/${m.id}`;
+          }
           
           movieModal.style.display = 'flex';
         };
@@ -121,7 +124,7 @@
     closeModal.onclick = () => { movieModal.style.display = 'none'; playerIframe.src = ''; };
     searchBtn.onclick = () => searchMovies(searchInput.value);
     searchInput.onkeypress = (e) => { if (e.key === 'Enter') searchMovies(searchInput.value); };
-    logoBtn.onclick = () => { searchInput.value = ''; searchMovies('Такси'); };
+    logoBtn.onclick = () => { searchInput.value = ''; searchMovies('Омен'); };
   </script>
 </body>
 </html>
