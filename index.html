@@ -96,7 +96,7 @@
 
     .player-frame {
       width: 100%;
-      height: 600px;
+      height: 650px;
       background-color: #161920;
       border-radius: 12px;
       border: 1px solid #222630;
@@ -121,9 +121,15 @@
   </header>
 
   <main class="container">
-    <h2 class="section-title" id="sectionTitle">Онлайн-плеер</h2>
+    <h2 class="section-title" id="sectionTitle">Онлайн Плеер</h2>
     <div class="player-frame">
-      <iframe id="mainPlayer" src="https://kodik.cc/find-player?title=%D0%A2%D0%B0%D0%BA%D1%81%D0%B8" allowfullscreen></iframe>
+      <!-- Атрибут sandbox="allow-scripts allow-same-origin" блокирует редиректы, вирусные окна и открытие левых сайтов -->
+      <iframe 
+        id="mainPlayer" 
+        src="https://voidboost.net/embed/243" 
+        allowfullscreen
+        sandbox="allow-scripts allow-same-origin allow-forms">
+      </iframe>
     </div>
   </main>
 
@@ -134,14 +140,33 @@
     const logoBtn = document.getElementById('logoBtn');
     const mainPlayer = document.getElementById('mainPlayer');
 
+    // База Kinopoisk ID для популярных запросов (работает без блокировок и без VPN)
+    const movieDatabase = {
+      'такси': '243',
+      'такси 1': '243',
+      'такси 2': '844',
+      'такси 3': '845',
+      'такси 4': '251546',
+      'такси 5': '989016',
+      'омен': '3862',
+      'брат': '41519',
+      'побег из шоушенка': '326',
+      'зеленая миля': '435'
+    };
+
     function searchMovie(query) {
-      const cleanQuery = query.trim();
+      const cleanQuery = query.trim().toLowerCase();
       if (!cleanQuery) return;
 
-      sectionTitle.textContent = `Поиск фильма: "${cleanQuery}"`;
-      
-      // Вызываем официальный поисковый плеер Kodik по названию
-      mainPlayer.src = `https://kodik.cc/find-player?title=${encodeURIComponent(cleanQuery)}`;
+      sectionTitle.textContent = `Поиск фильма: "${query}"`;
+
+      // Проверяем точное совпадение из базы
+      if (movieDatabase[cleanQuery]) {
+        mainPlayer.src = `https://voidboost.net/embed/${movieDatabase[cleanQuery]}`;
+      } else {
+        // Поиск по названию через независимый плеер Voidboost
+        mainPlayer.src = `https://voidboost.net/embed/search?query=${encodeURIComponent(query)}`;
+      }
     }
 
     searchBtn.addEventListener('click', () => searchMovie(searchInput.value));
@@ -151,8 +176,8 @@
 
     logoBtn.addEventListener('click', () => {
       searchInput.value = '';
-      sectionTitle.textContent = 'Онлайн-плеер';
-      mainPlayer.src = 'https://kodik.cc/find-player?title=%D0%A2%D0%B0%D0%BA%D1%81%D0%B8';
+      sectionTitle.textContent = 'Онлайн Плеер';
+      mainPlayer.src = 'https://voidboost.net/embed/243';
     });
   </script>
 </body>
