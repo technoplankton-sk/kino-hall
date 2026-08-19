@@ -145,7 +145,6 @@
       font-weight: 600;
     }
 
-    /* Модальное окно */
     .modal {
       display: none;
       position: fixed;
@@ -272,10 +271,16 @@
       try {
         const res = await fetch(`${API_URL}/movie/popular?api_key=${API_KEY}&language=ru-RU&page=1`);
         const data = await res.json();
+        
+        if (data.status_message) {
+          throw new Error(`Ошибка TMDB: ${data.status_message}`);
+        }
+
         sectionTitle.textContent = 'Популярное сейчас';
-        displayMovies(data.results);
+        displayMovies(data.results || []);
       } catch (err) {
         console.error('Ошибка:', err);
+        moviesGrid.innerHTML = `<p style="grid-column: 1/-1; color: #e50914;">${err.message || 'Ошибка загрузки. Проверьте API ключ.'}</p>`;
       }
     }
 
@@ -286,16 +291,28 @@
       moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ищем...</p>';
 
       try {
-        const res = await fetch(`${API_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(cleanQuery)}&include_adult=false`);
-        const data = await res.json();
-        
+        // 1. Поиск с русской/украинской локализацией
+        let res = await fetch(`${API_URL}/search/multi?api_key=${API_KEY}&language=ru-RU&query=${encodeURIComponent(cleanQuery)}&include_adult=false`);
+        let data = await res.json();
+
+        if (data.status_message) {
+          throw new Error(`Ошибка TMDB API: ${data.status_message}`);
+        }
+
         let filtered = (data.results || []).filter(item => item.media_type === 'movie' || item.media_type === 'tv');
+
+        // 2. Если по русскому названию ничего не нашло, ищем по международной базе
+        if (filtered.length === 0) {
+          res = await fetch(`${API_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(cleanQuery)}&include_adult=false`);
+          data = await res.json();
+          filtered = (data.results || []).filter(item => item.media_type === 'movie' || item.media_type === 'tv');
+        }
 
         sectionTitle.textContent = `Результаты поиска: "${cleanQuery}"`;
         displayMovies(filtered);
       } catch (err) {
         console.error('Ошибка поиска:', err);
-        moviesGrid.innerHTML = '<p style="grid-column: 1/-1; color: #e50914;">Ошибка при выполнении запроса.</p>';
+        moviesGrid.innerHTML = `<p style="grid-column: 1/-1; color: #e50914;">${err.message || 'Ошибка при выполнении запроса.'}</p>`;
       }
     }
 
@@ -303,7 +320,7 @@
       moviesGrid.innerHTML = '';
 
       if (!movies || movies.length === 0) {
-        moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ничего не найдено :( Попробуйте другое название.</p>';
+        moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ничего не найдено :( Попробуйте уточнить название.</p>';
         return;
       }
 
@@ -339,7 +356,7 @@
       modalTitle.textContent = title;
       modalOverview.textContent = movie.overview || 'Описание фильма пока не добавлено.';
 
-      // Встраиваем мультибалансер Kinobox по TMDB ID
+      // Встраиваем плеер Kinobox по TMDB ID
       playerIframe.src = `https://kinobox.in/embed/tmdb-${movie.id}`;
       movieModal.style.display = 'flex';
     }
