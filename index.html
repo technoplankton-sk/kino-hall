@@ -231,7 +231,7 @@
   </header>
 
   <main class="container">
-    <h2 class="section-title" id="sectionTitle">Популярное сейчас</h2>
+    <h2 class="section-title" id="sectionTitle">Новинки и популярное</h2>
     <div class="movies-grid" id="moviesGrid"></div>
   </main>
 
@@ -249,10 +249,6 @@
   </div>
 
   <script>
-    const API_KEY = '3fd2be6f0cd0ed1635c61b9333f69e22';
-    const API_URL = 'https://api.themoviedb.org/3';
-    const IMG_PATH = 'https://image.tmdb.org/t/p/w500';
-
     const moviesGrid = document.getElementById('moviesGrid');
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
@@ -265,54 +261,29 @@
     const modalTitle = document.getElementById('modalTitle');
     const modalOverview = document.getElementById('modalOverview');
 
-    getPopularMovies();
-
-    async function getPopularMovies() {
-      try {
-        const res = await fetch(`${API_URL}/movie/popular?api_key=${API_KEY}&language=ru-RU&page=1`);
-        const data = await res.json();
-        
-        if (data.status_message) {
-          throw new Error(`Ошибка TMDB: ${data.status_message}`);
-        }
-
-        sectionTitle.textContent = 'Популярное сейчас';
-        displayMovies(data.results || []);
-      } catch (err) {
-        console.error('Ошибка:', err);
-        moviesGrid.innerHTML = `<p style="grid-column: 1/-1; color: #e50914;">${err.message || 'Ошибка загрузки. Проверьте API ключ.'}</p>`;
-      }
-    }
+    // Загрузка стартовой подборки при запуске
+    searchMovies('2024');
 
     async function searchMovies(query) {
       const cleanQuery = query.trim();
       if (!cleanQuery) return;
 
-      moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ищем...</p>';
+      moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ищем фильмы...</p>';
 
       try {
-        // 1. Поиск с русской/украинской локализацией
-        let res = await fetch(`${API_URL}/search/multi?api_key=${API_KEY}&language=ru-RU&query=${encodeURIComponent(cleanQuery)}&include_adult=false`);
-        let data = await res.json();
+        const res = await fetch(`https://kinobox.in/api/search?title=${encodeURIComponent(cleanQuery)}`);
+        const data = await res.json();
 
-        if (data.status_message) {
-          throw new Error(`Ошибка TMDB API: ${data.status_message}`);
+        if (cleanQuery === '2024') {
+          sectionTitle.textContent = 'Новинки и популярное';
+        } else {
+          sectionTitle.textContent = `Результаты поиска: "${cleanQuery}"`;
         }
 
-        let filtered = (data.results || []).filter(item => item.media_type === 'movie' || item.media_type === 'tv');
-
-        // 2. Если по русскому названию ничего не нашло, ищем по международной базе
-        if (filtered.length === 0) {
-          res = await fetch(`${API_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(cleanQuery)}&include_adult=false`);
-          data = await res.json();
-          filtered = (data.results || []).filter(item => item.media_type === 'movie' || item.media_type === 'tv');
-        }
-
-        sectionTitle.textContent = `Результаты поиска: "${cleanQuery}"`;
-        displayMovies(filtered);
+        displayMovies(data || []);
       } catch (err) {
         console.error('Ошибка поиска:', err);
-        moviesGrid.innerHTML = `<p style="grid-column: 1/-1; color: #e50914;">${err.message || 'Ошибка при выполнении запроса.'}</p>`;
+        moviesGrid.innerHTML = '<p style="grid-column: 1/-1; color: #e50914;">Ошибка загрузки. Попробуйте обновить страницу.</p>';
       }
     }
 
@@ -325,13 +296,10 @@
       }
 
       movies.forEach(movie => {
-        const title = movie.title || movie.name || movie.original_title || 'Без названия';
-        const releaseDate = movie.release_date || movie.first_air_date || '';
-        const year = releaseDate ? releaseDate.split('-')[0] : '—';
-        const rating = movie.vote_average ? movie.vote_average.toFixed(1) : '—';
-        const poster = movie.poster_path 
-          ? IMG_PATH + movie.poster_path 
-          : 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки';
+        const title = movie.title || movie.title_en || 'Без названия';
+        const year = movie.year || '—';
+        const rating = movie.rating || '—';
+        const poster = movie.poster || 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки';
 
         const card = document.createElement('div');
         card.classList.add('movie-card');
@@ -352,12 +320,19 @@
     }
 
     function openMoviePlayer(movie) {
-      const title = movie.title || movie.name || movie.original_title;
+      const title = movie.title || movie.title_en;
       modalTitle.textContent = title;
-      modalOverview.textContent = movie.overview || 'Описание фильма пока не добавлено.';
+      modalOverview.textContent = movie.type ? `Тип: ${movie.type}. Год выпуска: ${movie.year}` : 'Описание фильма.';
 
-      // Встраиваем плеер Kinobox по TMDB ID
-      playerIframe.src = `https://kinobox.in/embed/tmdb-${movie.id}`;
+      // Встраиваем балансер Kinobox напрямую по ID
+      if (movie.kp_id) {
+        playerIframe.src = `https://kinobox.in/embed/kp-${movie.kp_id}`;
+      } else if (movie.imdb_id) {
+        playerIframe.src = `https://kinobox.in/embed/${movie.imdb_id}`;
+      } else {
+        playerIframe.src = `https://kinobox.in/embed/tmdb-${movie.id}`;
+      }
+
       movieModal.style.display = 'flex';
     }
 
@@ -380,7 +355,7 @@
 
     logoBtn.addEventListener('click', () => {
       searchInput.value = '';
-      getPopularMovies();
+      searchMovies('2024');
     });
   </script>
 </body>
