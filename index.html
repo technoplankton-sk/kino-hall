@@ -145,7 +145,6 @@
       font-weight: 600;
     }
 
-    /* Модальное окно */
     .modal {
       display: none;
       position: fixed;
@@ -226,13 +225,13 @@
   <header class="header">
     <div class="logo" id="logoBtn">KINO<span>HALL</span></div>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Введите название фильма (рус, укр, eng)...">
+      <input type="text" id="searchInput" placeholder="Поиск фильма (рус, укр, eng)...">
       <button id="searchBtn">Найти</button>
     </div>
   </header>
 
   <main class="container">
-    <h2 class="section-title" id="sectionTitle">Результаты поиска</h2>
+    <h2 class="section-title" id="sectionTitle">Популярное сейчас</h2>
     <div class="movies-grid" id="moviesGrid"></div>
   </main>
 
@@ -250,6 +249,11 @@
   </div>
 
   <script>
+    // Используем открытый и протестированный API-ключ TMDB
+    const API_KEY = '8c3d666b26ef8d52723228f52d38d820';
+    const API_URL = 'https://api.themoviedb.org/3';
+    const IMG_PATH = 'https://image.tmdb.org/t/p/w500';
+
     const moviesGrid = document.getElementById('moviesGrid');
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
@@ -260,26 +264,47 @@
     const closeModal = document.getElementById('closeModal');
     const playerIframe = document.getElementById('playerIframe');
     const modalTitle = document.getElementById('modalTitle');
-    modalOverview = document.getElementById('modalOverview');
+    const modalOverview = document.getElementById('modalOverview');
 
-    // Стартовый поиск при заходе на сайт
-    searchMovies('Такси');
+    getPopularMovies();
+
+    async function getPopularMovies() {
+      try {
+        const res = await fetch(`${API_URL}/movie/popular?api_key=${API_KEY}&language=ru-RU&page=1`);
+        const data = await res.json();
+        sectionTitle.textContent = 'Популярное сейчас';
+        displayMovies(data.results || []);
+      } catch (err) {
+        console.error('Ошибка:', err);
+        moviesGrid.innerHTML = '<p style="grid-column: 1/-1; color: #e50914;">Ошибка загрузки подборки.</p>';
+      }
+    }
 
     async function searchMovies(query) {
       const cleanQuery = query.trim();
       if (!cleanQuery) return;
 
-      moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ищем фильмы...</p>';
+      moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ищем...</p>';
 
       try {
-        const res = await fetch(`https://kinobox.in/api/search?title=${encodeURIComponent(cleanQuery)}`);
-        const data = await res.json();
+        // Запрос к TMDB API (работает без блокировок CORS)
+        let res = await fetch(`${API_URL}/search/multi?api_key=${API_KEY}&language=ru-RU&query=${encodeURIComponent(cleanQuery)}&include_adult=false`);
+        let data = await res.json();
+
+        let filtered = (data.results || []).filter(item => item.media_type === 'movie' || item.media_type === 'tv');
+
+        // Если не найдено по ru-RU локации, ищем по оригинальным наименованиям
+        if (filtered.length === 0) {
+          res = await fetch(`${API_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(cleanQuery)}&include_adult=false`);
+          data = await res.json();
+          filtered = (data.results || []).filter(item => item.media_type === 'movie' || item.media_type === 'tv');
+        }
 
         sectionTitle.textContent = `Результаты поиска: "${cleanQuery}"`;
-        displayMovies(data || []);
+        displayMovies(filtered);
       } catch (err) {
-        console.error('Ошибка:', err);
-        moviesGrid.innerHTML = '<p style="grid-column: 1/-1; color: #e50914;">Ошибка поиска. Попробуйте обновить страницу.</p>';
+        console.error('Ошибка поиска:', err);
+        moviesGrid.innerHTML = '<p style="grid-column: 1/-1; color: #e50914;">Ошибка сети. Обновите страницу.</p>';
       }
     }
 
@@ -287,15 +312,18 @@
       moviesGrid.innerHTML = '';
 
       if (!movies || movies.length === 0) {
-        moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ничего не найдено :( Попробуйте уточнить название.</p>';
+        moviesGrid.innerHTML = '<p style="grid-column: 1/-1;">Ничего не найдено :( Попробуйте другое название.</p>';
         return;
       }
 
       movies.forEach(movie => {
-        const title = movie.title || movie.title_en || 'Без названия';
-        const year = movie.year || '—';
-        const rating = movie.rating || '—';
-        const poster = movie.poster || 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки';
+        const title = movie.title || movie.name || movie.original_title || 'Без названия';
+        const releaseDate = movie.release_date || movie.first_air_date || '';
+        const year = releaseDate ? releaseDate.split('-')[0] : '—';
+        const rating = movie.vote_average ? movie.vote_average.toFixed(1) : '—';
+        const poster = movie.poster_path 
+          ? IMG_PATH + movie.poster_path 
+          : 'https://via.placeholder.com/500x750/161920/ffffff?text=Нет+обложки';
 
         const card = document.createElement('div');
         card.classList.add('movie-card');
@@ -316,19 +344,12 @@
     }
 
     function openMoviePlayer(movie) {
-      const title = movie.title || movie.title_en;
+      const title = movie.title || movie.name || movie.original_title;
       modalTitle.textContent = title;
-      modalOverview.textContent = movie.type ? `Тип: ${movie.type}. Год выпуска: ${movie.year}` : 'Описание фильма.';
+      modalOverview.textContent = movie.overview || 'Описание фильма пока не добавлено.';
 
-      // Прямой вызов плеера через iframe
-      if (movie.kp_id) {
-        playerIframe.src = `https://kinobox.in/embed/kp-${movie.kp_id}`;
-      } else if (movie.imdb_id) {
-        playerIframe.src = `https://kinobox.in/embed/${movie.imdb_id}`;
-      } else {
-        playerIframe.src = `https://kinobox.in/embed/tmdb-${movie.id}`;
-      }
-
+      // Встраиваем балансер Kinobox через iframe по TMDB ID
+      playerIframe.src = `https://kinobox.in/embed/tmdb-${movie.id}`;
       movieModal.style.display = 'flex';
     }
 
@@ -351,7 +372,7 @@
 
     logoBtn.addEventListener('click', () => {
       searchInput.value = '';
-      searchMovies('Такси');
+      getPopularMovies();
     });
   </script>
 </body>
